@@ -2,40 +2,73 @@ pipeline {
     agent any
 
     environment {
-        TOMCAT_HOME = "/opt/tomcat9"
+        REMOTE_HOST = "16.113.29.56"
+        REMOTE_USER = "ubuntu"
+        APP_DIR = "/home/ubuntu/travelhub"
+        REPO_URL = "https://github.com/chandrakalyan2108/travelhub.in.git"
+        TOMCAT_HOME = "/opt/tomcat"
     }
 
     stages {
 
-        stage('Checkout') {
+        stage('Deploy on Server B') {
             steps {
-                git branch: 'main', url: 'https://github.com/chandrakalyan2108/travelhub.in.git'
-            }
-        }
+                withCredentials([file(credentialsId: 'privatekey.pem', variable: 'PEM')]) {
 
-        stage('Build') {
-            steps {
-                sh 'mvn clean package -DskipTests'
-            }
-        }
+                    sh '''
+                    chmod 400 "$PEM"
 
-        stage('Deploy to Tomcat') {
-            steps {
-                sh '''
-                sudo cp target/*.war /opt/tomcat9/webapps/ROOT.war
-                sudo /opt/tomcat9/bin/shutdown.sh || true
-                sudo /opt/tomcat9/bin/startup.sh
-                '''
+                    ssh -i "$PEM" -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} << EOF
+
+                    set -e
+
+                    echo "===== UPDATE PROJECT ====="
+
+                    if [ ! -d "${APP_DIR}/.git" ]; then
+                        rm -rf ${APP_DIR}
+                        git clone ${REPO_URL} ${APP_DIR}
+                    else
+                        cd ${APP_DIR}
+                        git reset --hard
+                        git clean -fd
+                        git pull origin main
+                    fi
+
+                    echo "===== BUILD ====="
+                    cd ${APP_DIR}
+                    mvn clean package -DskipTests
+
+                    echo "===== STOP TOMCAT ====="
+                    ${TOMCAT_HOME}/bin/shutdown.sh || true
+                    sleep 10
+
+                    echo "===== DEPLOY ====="
+                    sudo rm -rf ${TOMCAT_HOME}/webapps/ROOT
+                    sudo rm -f ${TOMCAT_HOME}/webapps/ROOT.war
+
+                    sudo cp target/*.war ${TOMCAT_HOME}/webapps/ROOT.war
+
+                    echo "===== START TOMCAT ====="
+                    ${TOMCAT_HOME}/bin/startup.sh
+
+                    echo "===== SUCCESS ====="
+
+                    EOF
+                    '''
+                }
             }
         }
     }
 
     post {
         success {
-            echo "✅ Deployment Successful"
+            echo '✅ Deployment Successful'
         }
         failure {
-            echo "❌ Build Failed"
+            echo '❌ Deployment Failed'
+        }
+        always {
+            cleanWs()
         }
     }
 }
