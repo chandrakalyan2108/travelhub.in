@@ -1,31 +1,22 @@
 pipeline {
     agent any
-
     environment {
         REMOTE_HOST = "16.113.29.56"
         REMOTE_USER = "ubuntu"
     }
-
     stages {
-
         stage('Build and Deploy on Server B') {
             steps {
                 withCredentials([file(credentialsId: 'privatekey.pem', variable: 'PEM')]) {
-
                     sh '''
                     chmod 400 "$PEM"
-
                     ssh -i "$PEM" -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} << 'EOF'
-
                     set -e
-
                     APP_DIR="/home/ubuntu/travelhub"
                     PROJECT_DIR="/home/ubuntu/travelhub/websites/travelhub"
                     REPO_URL="https://github.com/chandrakalyan2108/travelhub.in.git"
                     TOMCAT_HOME="/opt/tomcat"
-
                     echo "===== UPDATE SOURCE ====="
-
                     if [ ! -d "$APP_DIR/.git" ]; then
                         rm -rf "$APP_DIR"
                         git clone "$REPO_URL" "$APP_DIR"
@@ -34,43 +25,31 @@ pipeline {
                         git fetch origin
                         git reset --hard origin/main
                     fi
-
                     echo "===== BUILD ====="
                     cd "$PROJECT_DIR"
-
                     mvn clean package -DskipTests
-
                     WAR_FILE=$(find target -name "*.war" | head -1)
-
                     if [ -z "$WAR_FILE" ]; then
                         echo "WAR file not found"
                         exit 1
                     fi
-
                     echo "===== STOP TOMCAT ====="
                     $TOMCAT_HOME/bin/shutdown.sh || true
                     sleep 10
-
                     echo "===== DEPLOY ====="
                     sudo rm -rf $TOMCAT_HOME/webapps/ROOT
                     sudo rm -f $TOMCAT_HOME/webapps/ROOT.war
-
                     sudo cp "$WAR_FILE" $TOMCAT_HOME/webapps/ROOT.war
-
                     echo "===== START TOMCAT ====="
                     $TOMCAT_HOME/bin/startup.sh
-
                     echo "===== DEPLOYMENT SUCCESSFUL ====="
-
                     ls -lh $TOMCAT_HOME/webapps/
-
-                    EOF
+EOF
                     '''
                 }
             }
         }
     }
-
     post {
         success {
             echo '✅ Deployment Successful'
