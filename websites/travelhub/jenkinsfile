@@ -1,7 +1,7 @@
 pipeline {
     agent any
     environment {
-        REMOTE_HOST = "16.113.29.56"
+        REMOTE_HOST = "16.112.60.97"
         REMOTE_USER = "ubuntu"
     }
     stages {
@@ -37,9 +37,9 @@ pipeline {
                     $TOMCAT_HOME/bin/shutdown.sh || true
                     sleep 10
                     echo "===== DEPLOY ====="
-                    sudo rm -rf $TOMCAT_HOME/webapps/ROOT
-                    sudo rm -f $TOMCAT_HOME/webapps/ROOT.war
-                    sudo cp "$WAR_FILE" $TOMCAT_HOME/webapps/ROOT.war
+                    sudo rm -rf $TOMCAT_HOME/webapps/travelhub.in
+                    sudo rm -f $TOMCAT_HOME/webapps/travelhub.in.war
+                    sudo cp "$WAR_FILE" $TOMCAT_HOME/webapps/travelhub.in.war
                     echo "===== START TOMCAT ====="
                     $TOMCAT_HOME/bin/startup.sh
                     echo "===== DEPLOYMENT SUCCESSFUL ====="
