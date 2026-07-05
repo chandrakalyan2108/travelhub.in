@@ -1,15 +1,6 @@
 pipeline {
     agent any
 
-    environment {
-        REMOTE_HOST = "16.113.29.56"
-        REMOTE_USER = "ubuntu"
-        APP_DIR = "/home/ubuntu/travelhub"
-        PROJECT_DIR = "/home/ubuntu/travelhub/websites/travelhub"
-        REPO_URL = "https://github.com/chandrakalyan2108/travelhub.in.git"
-        TOMCAT_HOME = "/opt/tomcat"
-    }
-
     stages {
 
         stage('Build and Deploy') {
@@ -19,26 +10,34 @@ pipeline {
                     sh '''
                     chmod 400 "$PEM"
 
-                    ssh -i "$PEM" -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} << 'EOF'
+                    ssh -i "$PEM" -o StrictHostKeyChecking=no ubuntu@16.113.29.56 << 'EOF'
+
                     set -e
+
+                    APP_DIR="/home/ubuntu/travelhub"
+                    PROJECT_DIR="/home/ubuntu/travelhub/websites/travelhub"
+                    REPO_URL="https://github.com/chandrakalyan2108/travelhub.in.git"
+                    TOMCAT_HOME="/opt/tomcat"
 
                     echo "===== UPDATE SOURCE ====="
 
-                    if [ ! -d "${APP_DIR}/.git" ]; then
-                        rm -rf ${APP_DIR}
-                        git clone ${REPO_URL} ${APP_DIR}
+                    if [ ! -d "$APP_DIR/.git" ]; then
+                        rm -rf "$APP_DIR"
+                        git clone "$REPO_URL" "$APP_DIR"
                     else
-                        cd ${APP_DIR}
+                        cd "$APP_DIR"
                         git fetch origin
                         git reset --hard origin/main
                     fi
 
+                    echo "===== PROJECT FILES ====="
+                    ls -la "$PROJECT_DIR"
+
+                    echo "===== REMOVE WEBAPP RUNNER PLUGIN ====="
+                    sed -i '/<artifactId>maven-dependency-plugin<\\/artifactId>/,/<\\/plugin>/d' "$PROJECT_DIR/pom.xml" || true
+
                     echo "===== BUILD ====="
-                    cd ${PROJECT_DIR}
-
-                    # Remove webapp-runner plugin if present
-                    sed -i '/<artifactId>maven-dependency-plugin<\\/artifactId>/,/<\\/plugin>/d' pom.xml
-
+                    cd "$PROJECT_DIR"
                     mvn clean package -DskipTests
 
                     WAR_FILE=$(find target -name "*.war" | head -1)
@@ -48,20 +47,22 @@ pipeline {
                         exit 1
                     fi
 
+                    echo "WAR FOUND: $WAR_FILE"
+
                     echo "===== STOP TOMCAT ====="
-                    ${TOMCAT_HOME}/bin/shutdown.sh || true
+                    "$TOMCAT_HOME/bin/shutdown.sh" || true
                     sleep 10
 
                     echo "===== DEPLOY ====="
-                    sudo rm -rf ${TOMCAT_HOME}/webapps/ROOT
-                    sudo rm -f ${TOMCAT_HOME}/webapps/ROOT.war
+                    sudo rm -rf "$TOMCAT_HOME/webapps/ROOT"
+                    sudo rm -f "$TOMCAT_HOME/webapps/ROOT.war"
 
-                    sudo cp "$WAR_FILE" ${TOMCAT_HOME}/webapps/ROOT.war
+                    sudo cp "$WAR_FILE" "$TOMCAT_HOME/webapps/ROOT.war"
 
                     echo "===== START TOMCAT ====="
-                    ${TOMCAT_HOME}/bin/startup.sh
+                    "$TOMCAT_HOME/bin/startup.sh"
 
-                    echo "===== DONE ====="
+                    echo "===== DEPLOYMENT SUCCESSFUL ====="
 
                     EOF
                     '''
