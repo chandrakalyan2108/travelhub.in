@@ -4,9 +4,10 @@ pipeline {
     environment {
         REMOTE_HOST = "16.113.29.56"
         REMOTE_USER = "ubuntu"
-        APP_DIR = "/home/ubuntu/travelhub"
-        REPO_URL = "https://github.com/chandrakalyan2108/travelhub.in.git"
+        APP_DIR     = "/home/ubuntu/travelhub"
+        REPO_URL    = "https://github.com/chandrakalyan2108/travelhub.in.git"
         TOMCAT_HOME = "/opt/tomcat"
+        PROJECT_DIR = "/home/ubuntu/travelhub/websites/travelhub"
     }
 
     stages {
@@ -34,24 +35,41 @@ pipeline {
                         git pull origin main
                     fi
 
-                    echo "===== BUILD ====="
-                    cd ${APP_DIR}
+                    echo "===== VERIFY PROJECT ====="
+                    ls -la ${PROJECT_DIR}
+
+                    echo "===== BUILD PROJECT ====="
+                    cd ${PROJECT_DIR}
+
+                    mvn -version
                     mvn clean package -DskipTests
+
+                    echo "===== FIND WAR ====="
+                    WAR_FILE=$(find target -name "*.war" | head -1)
+
+                    if [ -z "$WAR_FILE" ]; then
+                        echo "WAR file not found"
+                        exit 1
+                    fi
+
+                    echo "WAR FILE: $WAR_FILE"
 
                     echo "===== STOP TOMCAT ====="
                     ${TOMCAT_HOME}/bin/shutdown.sh || true
                     sleep 10
 
-                    echo "===== DEPLOY ====="
+                    echo "===== REMOVE OLD DEPLOYMENT ====="
                     sudo rm -rf ${TOMCAT_HOME}/webapps/ROOT
                     sudo rm -f ${TOMCAT_HOME}/webapps/ROOT.war
 
-                    sudo cp target/*.war ${TOMCAT_HOME}/webapps/ROOT.war
+                    echo "===== DEPLOY NEW WAR ====="
+                    sudo cp "$WAR_FILE" ${TOMCAT_HOME}/webapps/ROOT.war
 
                     echo "===== START TOMCAT ====="
                     ${TOMCAT_HOME}/bin/startup.sh
 
-                    echo "===== SUCCESS ====="
+                    echo "===== DEPLOYMENT SUCCESSFUL ====="
+                    ls -lh ${TOMCAT_HOME}/webapps/
 
                     EOF
                     '''
@@ -64,9 +82,11 @@ pipeline {
         success {
             echo '✅ Deployment Successful'
         }
+
         failure {
             echo '❌ Deployment Failed'
         }
+
         always {
             cleanWs()
         }
