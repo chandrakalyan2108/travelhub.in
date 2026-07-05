@@ -1,58 +1,89 @@
 pipeline {
     agent any
+
     environment {
-        REMOTE_HOST = "16.112.60.97"
+        REMOTE_HOST = "16.113.29.56"   // Maven + Tomcat server (NOT the Jenkins server)
         REMOTE_USER = "ubuntu"
+        APP_CONTEXT = "travelhub.in"   // deployed at http://<REMOTE_HOST>:8080/travelhub.in/
     }
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+    }
+
     stages {
-        stage('Build and Deploy on Server B') {
+
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build and Deploy on Maven+Tomcat Server') {
             steps {
                 withCredentials([file(credentialsId: 'privatekey.pem', variable: 'PEM')]) {
                     sh '''
-                    chmod 400 "$PEM"
-                    ssh -i "$PEM" -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} << 'EOF'
                     set -e
-                    APP_DIR="/home/ubuntu/travelhub"
-                    PROJECT_DIR="/home/ubuntu/travelhub/websites/travelhub"
-                    REPO_URL="https://github.com/chandrakalyan2108/travelhub.in.git"
-                    TOMCAT_HOME="/opt/tomcat"
-                    echo "===== UPDATE SOURCE ====="
-                    if [ ! -d "$APP_DIR/.git" ]; then
-                        rm -rf "$APP_DIR"
-                        git clone "$REPO_URL" "$APP_DIR"
-                    else
-                        cd "$APP_DIR"
-                        git fetch origin
-                        git reset --hard origin/main
-                    fi
-                    echo "===== BUILD ====="
-                    cd "$PROJECT_DIR"
-                    mvn clean package -DskipTests
-                    WAR_FILE=$(find target -name "*.war" | head -1)
-                    if [ -z "$WAR_FILE" ]; then
-                        echo "WAR file not found"
-                        exit 1
-                    fi
-                    echo "===== STOP TOMCAT ====="
-                    $TOMCAT_HOME/bin/shutdown.sh || true
-                    sleep 10
-                    echo "===== DEPLOY ====="
-                    sudo rm -rf $TOMCAT_HOME/webapps/travelhub.in
-                    sudo rm -f $TOMCAT_HOME/webapps/travelhub.in.war
-                    sudo cp "$WAR_FILE" $TOMCAT_HOME/webapps/travelhub.in.war
-                    echo "===== START TOMCAT ====="
-                    $TOMCAT_HOME/bin/startup.sh
-                    echo "===== DEPLOYMENT SUCCESSFUL ====="
-                    ls -lh $TOMCAT_HOME/webapps/
+                    chmod 400 "$PEM"
+
+                    ssh -i "$PEM" -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} bash -s -- "$APP_CONTEXT" << 'EOF'
+set -e
+APP_CONTEXT="$1"
+APP_DIR="/home/ubuntu/travelhub"
+PROJECT_DIR="/home/ubuntu/travelhub/websites/travelhub"
+REPO_URL="https://github.com/chandrakalyan2108/travelhub.in.git"
+TOMCAT_HOME="/opt/tomcat"
+
+echo "===== UPDATE SOURCE ====="
+if [ ! -d "$APP_DIR/.git" ]; then
+    rm -rf "$APP_DIR"
+    git clone "$REPO_URL" "$APP_DIR"
+else
+    cd "$APP_DIR"
+    git fetch origin
+    git reset --hard origin/main
+fi
+
+echo "===== BUILD ====="
+cd "$PROJECT_DIR"
+mvn clean package -DskipTests
+
+WAR_FILE=$(find target -maxdepth 1 -name "*.war" | head -1)
+if [ -z "$WAR_FILE" ]; then
+    echo "ERROR: WAR file not found after build"
+    exit 1
+fi
+echo "Built WAR: $WAR_FILE"
+
+echo "===== STOP TOMCAT ====="
+"$TOMCAT_HOME"/bin/shutdown.sh || true
+sleep 10
+
+echo "===== DEPLOY ====="
+sudo rm -rf "$TOMCAT_HOME/webapps/${APP_CONTEXT}"
+sudo rm -f "$TOMCAT_HOME/webapps/${APP_CONTEXT}.war"
+sudo cp "$WAR_FILE" "$TOMCAT_HOME/webapps/${APP_CONTEXT}.war"
+
+echo "===== START TOMCAT ====="
+"$TOMCAT_HOME"/bin/startup.sh
+sleep 5
+
+echo "===== VERIFY ====="
+curl -sI "http://localhost:8080/${APP_CONTEXT}/" || echo "WARNING: local curl check failed, inspect manually"
+
+echo "===== DEPLOYMENT SUCCESSFUL ====="
+ls -lh "$TOMCAT_HOME/webapps/"
 EOF
                     '''
                 }
             }
         }
     }
+
     post {
         success {
-            echo '✅ Deployment Successful'
+            echo "✅ Deployment Successful — check http://${REMOTE_HOST}:8080/${APP_CONTEXT}/"
         }
         failure {
             echo '❌ Deployment Failed'
