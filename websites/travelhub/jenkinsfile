@@ -1,55 +1,41 @@
 pipeline {
     agent any
 
-    tools {
-        maven 'Maven3'
-        jdk 'JDK21'
-    }
-
     environment {
         TOMCAT_HOME = "/opt/tomcat9"
-        WAR_NAME = "travelhub.war"
     }
 
     stages {
 
-        stage('Checkout Code') {
+        stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/YOUR_USERNAME/YOUR_REPO.git'
+                git branch: 'main', url: 'https://github.com/chandrakalyan2108/travelhub.in.git'
             }
         }
 
-        stage('Build Maven Project') {
+        stage('Build') {
             steps {
                 sh 'mvn clean package -DskipTests'
             }
         }
 
-        stage('Copy WAR to Tomcat') {
+        stage('Deploy to Tomcat') {
             steps {
                 sh '''
-                sudo cp target/*.war $TOMCAT_HOME/webapps/ROOT.war
+                sudo cp target/*.war /opt/tomcat9/webapps/ROOT.war
+                sudo /opt/tomcat9/bin/shutdown.sh || true
+                sudo /opt/tomcat9/bin/startup.sh
                 '''
             }
         }
-
-        stage('Restart Tomcat') {
-            steps {
-                sh '''
-                sudo $TOMCAT_HOME/bin/shutdown.sh || true
-                sudo $TOMCAT_HOME/bin/startup.sh
-                '''
-            }
-        }
-
     }
 
     post {
         success {
-            echo '✅ Deployment Successful - TravelHub is running!'
+            echo "✅ Deployment Successful"
         }
         failure {
-            echo '❌ Build or Deployment Failed'
+            echo "❌ Build Failed"
         }
     }
 }
