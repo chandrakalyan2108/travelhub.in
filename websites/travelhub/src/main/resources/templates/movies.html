@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Movies')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<section class="hero" style="padding-bottom:60px;">
+    <div class="container">
+        <h1>Book movie tickets</h1>
+        <p>Latest releases in cinemas near you</p>
+    </div>
+</section>
+
+<div class="container">
+    <div class="search-panel">
+        <h3>Search movies by city</h3>
+        <form class="search-form" method="get" th:action="@{/movies}">
+            <div class="field">
+                <label>City</label>
+                <input type="text" name="city" placeholder="e.g. Hyderabad, Mumbai" th:value="${city}"/>
+            </div>
+            <button class="btn" type="submit">Search</button>
+        </form>
+    </div>
+</div>
+
+<div class="container section">
+    <h2 class="section-title">🎬 Now Showing</h2>
+    <div class="list-grid" th:if="${not #lists.isEmpty(movies)}">
+        <a class="card" th:each="m : ${movies}" th:href="@{/movies/{id}(id=${m.id})}">
+            <img th:src="${m.imageUrl}" th:alt="${m.title}"/>
+            <div class="card-body">
+                <div class="card-title" th:text="${m.title}">Movie Title</div>
+                <div class="card-sub" th:text="${m.genre} + ' · ' + ${m.language} + ' · ' + ${m.duration}">Genre · Lang · Duration</div>
+                <span class="badge" th:text="${m.theater} + ', ' + ${m.city}">Theater, City</span>
+                <div class="price-row">
+                    <div class="price">₹<span th:text="${#numbers.formatDecimal(m.price,0,0)}">0</span></div>
+                    <div class="rating">★ <span th:text="${m.rating}">4.5</span></div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="empty-state" th:if="${#lists.isEmpty(movies)}">No movies found for that city. Try another search.</div>
+</div>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('About')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<div class="container section" style="max-width:700px;">
+    <div class="panel">
+        <h2>About TravelHub</h2>
+        <p>TravelHub is a demo multi-category travel booking platform built with Java, Spring Boot and Thymeleaf. It brings together hotels, flights, trains, buses, movie tickets and metro passes in a single booking and payment flow, packaged as a WAR for deployment on Apache Tomcat 9.</p>
+        <p>This is a portfolio / learning project. Payments are simulated (no real payment gateway is wired up) — see the README for how to plug in Razorpay or Stripe.</p>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

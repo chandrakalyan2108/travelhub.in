@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="head(title)" th:remove="tag">
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title th:text="${title} + ' | TravelHub'">TravelHub</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/images/logo.svg}"/>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</div>
+
+<nav class="navbar" th:fragment="navbar">
+    <div class="container">
+        <a class="brand" th:href="@{/}">
+            <img class="brand-logo" th:src="@{/images/logo.svg}" alt="TravelHub logo"/>
+            <span class="brand-text">Travel<span>Hub</span></span>
+        </a>
+        <div class="nav-links">
+            <a th:href="@{/hotels}">🏨 Hotels</a>
+            <a th:href="@{/flights}">✈️ Flights</a>
+            <a th:href="@{/trains}">🚆 Trains</a>
+            <a th:href="@{/buses}">🚌 Buses</a>
+            <a th:href="@{/movies}">🎬 Movies</a>
+            <a th:href="@{/metro}">🚇 Metro</a>
+        </div>
+    </div>
+</nav>
+
+<footer th:fragment="footer">
+    <div class="container">
+        <div>© 2026 TravelHub. All rights reserved.</div>
+        <div><a th:href="@{/about}">About</a> &nbsp;·&nbsp; Hotels, Flights, Trains, Buses, Movies &amp; Metro tickets — all in one place.</div>
+    </div>
+</footer>
+
+</body>
+</html>

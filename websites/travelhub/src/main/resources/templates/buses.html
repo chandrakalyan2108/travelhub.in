@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Buses')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<section class="hero" style="padding-bottom:60px;">
+    <div class="container">
+        <h1>Book bus tickets</h1>
+        <p>AC sleeper, seater and more, across India</p>
+    </div>
+</section>
+
+<div class="container">
+    <div class="search-panel">
+        <h3>Search buses</h3>
+        <form class="search-form" method="get" th:action="@{/buses}">
+            <div class="field"><label>From</label><input type="text" name="source" placeholder="Hyderabad" th:value="${source}"/></div>
+            <div class="field"><label>To</label><input type="text" name="destination" placeholder="Bengaluru" th:value="${destination}"/></div>
+            <div class="field"><label>Date</label><input type="date" name="date" th:value="${date}"/></div>
+            <button class="btn" type="submit">Search</button>
+        </form>
+    </div>
+</div>
+
+<div class="container section">
+    <h2 class="section-title">🚌 Available Buses</h2>
+
+    <div th:if="${#lists.isEmpty(buses)}" class="empty-state">No buses found for that route. Try another search.</div>
+
+    <div th:each="b : ${buses}" class="panel" style="margin-bottom:16px;">
+        <div class="route-row">
+            <div style="min-width:150px;">
+                <div class="card-title" th:text="${b.operator}">Operator</div>
+                <div class="card-sub" th:text="${b.busType}">Bus Type</div>
+            </div>
+            <div class="route-point"><div class="time" th:text="${b.departureTime}">10:00</div><div class="place" th:text="${b.source}">Source</div></div>
+            <div class="route-line"></div>
+            <div class="route-point"><div class="time" th:text="${b.arrivalTime}">12:00</div><div class="place" th:text="${b.destination}">Destination</div></div>
+            <div style="text-align:right; min-width:130px;">
+                <div class="price">₹<span th:text="${#numbers.formatDecimal(b.price,0,0)}">0</span></div>
+                <div class="card-sub" th:text="${b.seatsAvailable} + ' seats left'">seats</div>
+            </div>
+        </div>
+
+        <details style="margin-top:12px;">
+            <summary class="btn secondary" style="display:inline-block;">Book this bus</summary>
+            <form method="post" th:action="@{/booking/create}" style="margin-top:14px;">
+                <input type="hidden" name="type" value="BUS"/>
+                <input type="hidden" name="itemId" th:value="${b.id}"/>
+                <input type="hidden" name="itemName" th:value="${b.operator} + ' (' + ${b.busType} + ')'"/>
+                <input type="hidden" name="itemDetails" th:value="${b.source} + ' → ' + ${b.destination}"/>
+                <input type="hidden" name="amount" th:value="${b.price}"/>
+                <div class="form-grid">
+                    <div><label>Travel date</label><input type="date" name="travelDate" required/></div>
+                    <div><label>Passengers</label><input type="number" name="quantity" min="1" value="1" required/></div>
+                    <div><label>Passenger name</label><input type="text" name="customerName" required/></div>
+                    <div><label>Email</label><input type="email" name="customerEmail" required/></div>
+                    <div><label>Phone</label><input type="tel" name="customerPhone"/></div>
+                </div>
+                <button type="submit" class="btn block" style="margin-top:14px;">Continue to Payment</button>
+            </form>
+        </details>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

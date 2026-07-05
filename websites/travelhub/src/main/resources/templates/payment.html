@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Payment')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<div class="container section" style="max-width:700px;">
+    <div class="detail-wrap" style="grid-template-columns: 1fr;">
+        <div class="panel">
+            <h3>Booking summary</h3>
+            <div class="summary-line"><span>Reference</span><strong th:text="${booking.reference}">TH-XXXX</strong></div>
+            <div class="summary-line"><span>Category</span><span th:text="${booking.type}">HOTEL</span></div>
+            <div class="summary-line"><span>Item</span><span th:text="${booking.itemName}">Item</span></div>
+            <div class="summary-line" th:if="${booking.itemDetails}"><span>Details</span><span th:text="${booking.itemDetails}">Details</span></div>
+            <div class="summary-line" th:if="${booking.travelDate}"><span>Date</span><span th:text="${booking.travelDate}">2026-07-10</span></div>
+            <div class="summary-line"><span>Quantity</span><span th:text="${booking.quantity}">1</span></div>
+            <div class="summary-line"><span>Guest</span><span th:text="${booking.customerName}">Name</span></div>
+            <div class="summary-line total"><span>Amount payable</span><span>₹<span th:text="${#numbers.formatDecimal(booking.amount,0,0)}">0</span></span></div>
+        </div>
+
+        <div class="panel" style="margin-top:18px;">
+            <h3>Choose payment method</h3>
+            <form method="post" th:action="@{/booking/{ref}/pay(ref=${booking.reference})}">
+                <div class="pay-methods">
+                    <label class="pay-method"><input type="radio" name="method" value="UPI" checked/>📱 UPI</label>
+                    <label class="pay-method"><input type="radio" name="method" value="CARD"/>💳 Card</label>
+                    <label class="pay-method"><input type="radio" name="method" value="NETBANKING"/>🏦 Net Banking</label>
+                    <label class="pay-method"><input type="radio" name="method" value="WALLET"/>👛 Wallet</label>
+                </div>
+                <button type="submit" class="btn block" style="margin-top:20px;">Pay ₹<span th:text="${#numbers.formatDecimal(booking.amount,0,0)}">0</span></button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

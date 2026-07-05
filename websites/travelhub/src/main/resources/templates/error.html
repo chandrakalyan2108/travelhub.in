@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Error')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<div class="container section" style="max-width:600px; text-align:center;">
+    <div class="panel">
+        <h2>⚠️ Something went wrong</h2>
+        <p class="card-sub" th:text="${message}">Error details</p>
+        <a class="btn" th:href="@{/}">Go back home</a>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 450">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#3a1230"/><stop offset="100%" stop-color="#e91e8c"/></linearGradient></defs>
+  <rect width="300" height="450" fill="url(#g)"/>
+  <path d="M150 300 C90 250 60 200 90 165 C110 145 140 150 150 175 C160 150 190 145 210 165 C240 200 210 250 150 300 Z" fill="#ffffff"/>
+  <text x="150" y="410" text-anchor="middle" fill="#ffffff" font-family="Arial" font-size="24" font-weight="bold">ROMANCE</text>
+</svg>

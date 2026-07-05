@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${movie.title})}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<div class="container section">
+    <div class="detail-wrap">
+        <div>
+            <img class="detail-img" th:src="${movie.imageUrl}" th:alt="${movie.title}"/>
+            <div class="panel" style="margin-top:18px;">
+                <h3 th:text="${movie.title}">Movie Title</h3>
+                <p class="card-sub" th:text="${movie.genre} + ' · ' + ${movie.language} + ' · ' + ${movie.duration}">Genre · Lang · Duration</p>
+                <span class="badge" th:text="${movie.theater} + ', ' + ${movie.city}">Theater, City</span>
+                <p style="margin-top:14px;">Rating: <span class="rating">★ <span th:text="${movie.rating}">4.5</span></span></p>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h3>Book tickets</h3>
+            <p class="price">₹<span th:text="${#numbers.formatDecimal(movie.price,0,0)}">0</span> <small style="font-size:13px;color:var(--muted);">/ ticket</small></p>
+            <form method="post" th:action="@{/booking/create}">
+                <input type="hidden" name="type" value="MOVIE"/>
+                <input type="hidden" name="itemId" th:value="${movie.id}"/>
+                <input type="hidden" name="itemName" th:value="${movie.title}"/>
+                <input type="hidden" name="amount" th:value="${movie.price}"/>
+
+                <label style="font-size:12.5px;font-weight:700;color:var(--muted);text-transform:uppercase;">Show date</label>
+                <input type="date" name="travelDate" required style="width:100%;padding:10px;border-radius:8px;border:1px solid #dde1e8;margin:6px 0 14px;"/>
+
+                <label style="font-size:12.5px;font-weight:700;color:var(--muted);text-transform:uppercase;">Showtime</label>
+                <div class="chip-group" style="margin:8px 0 16px;">
+                    <label class="chip" th:each="st, iter : ${movie.showtimeList}">
+                        <input type="radio" name="itemDetails" th:value="${movie.theater} + ' · Show: ' + ${st}" th:checked="${iter.index == 0}"/>
+                        <span th:text="${st}">10:00 AM</span>
+                    </label>
+                </div>
+
+                <div class="form-grid">
+                    <div><label>Tickets</label><input type="number" name="quantity" min="1" value="2" required/></div>
+                    <div><label>Name</label><input type="text" name="customerName" required/></div>
+                    <div class="full"><label>Email</label><input type="email" name="customerEmail" required/></div>
+                    <div class="full"><label>Phone</label><input type="tel" name="customerPhone"/></div>
+                </div>
+                <button type="submit" class="btn block" style="margin-top:16px;">Continue to Payment</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Hotels')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<section class="hero" style="padding-bottom:60px;">
+    <div class="container">
+        <h1>Find your stay</h1>
+        <p>Handpicked hotels across India</p>
+    </div>
+</section>
+
+<div class="container">
+    <div class="search-panel">
+        <h3>Search hotels by city</h3>
+        <form class="search-form" method="get" th:action="@{/hotels}">
+            <div class="field">
+                <label>City</label>
+                <input type="text" name="city" placeholder="e.g. Hyderabad, Goa, Mumbai" th:value="${city}"/>
+            </div>
+            <button class="btn" type="submit">Search</button>
+        </form>
+    </div>
+</div>
+
+<div class="container section">
+    <h2 class="section-title">🏨 Available Hotels</h2>
+    <div class="list-grid" th:if="${not #lists.isEmpty(hotels)}">
+        <a class="card" th:each="h : ${hotels}" th:href="@{/hotels/{id}(id=${h.id})}">
+            <img th:src="${h.imageUrl}" th:alt="${h.name}"/>
+            <div class="card-body">
+                <div class="card-title" th:text="${h.name}">Hotel Name</div>
+                <div class="card-sub" th:text="${h.city} + ' · ' + ${h.address}">City · Address</div>
+                <span class="badge" th:text="${h.amenities}">Amenities</span>
+                <div class="price-row">
+                    <div class="price">₹<span th:text="${#numbers.formatDecimal(h.pricePerNight,0,0)}">0</span>/night</div>
+                    <div class="rating">★ <span th:text="${h.rating}">4.5</span></div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="empty-state" th:if="${#lists.isEmpty(hotels)}">No hotels found for that city. Try another search.</div>
+</div>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

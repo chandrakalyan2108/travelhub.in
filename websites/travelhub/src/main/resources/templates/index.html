@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Book Hotels, Flights, Trains, Buses, Movies & Metro')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<section class="hero">
+    <div class="container">
+        <h1>Book everything for your next trip — in one place</h1>
+        <p>Hotels · Flights · Trains · Buses · Movie tickets · Metro passes</p>
+    </div>
+</section>
+
+<div class="container">
+    <div class="category-grid">
+        <a class="category-card" style="--cat-color:#e91e63" th:href="@{/hotels}">
+            <span class="icon">🏨</span><span class="label">Hotels</span>
+        </a>
+        <a class="category-card" style="--cat-color:#2196f3" th:href="@{/flights}">
+            <span class="icon">✈️</span><span class="label">Flights</span>
+        </a>
+        <a class="category-card" style="--cat-color:#4caf50" th:href="@{/trains}">
+            <span class="icon">🚆</span><span class="label">Trains</span>
+        </a>
+        <a class="category-card" style="--cat-color:#ff9800" th:href="@{/buses}">
+            <span class="icon">🚌</span><span class="label">Buses</span>
+        </a>
+        <a class="category-card" style="--cat-color:#9c27b0" th:href="@{/movies}">
+            <span class="icon">🎬</span><span class="label">Movies</span>
+        </a>
+        <a class="category-card" style="--cat-color:#00bcd4" th:href="@{/metro}">
+            <span class="icon">🚇</span><span class="label">Metro</span>
+        </a>
+    </div>
+</div>
+
+<div class="container section">
+    <h2 class="section-title">🔥 Why TravelHub</h2>
+    <div class="list-grid">
+        <div class="card"><div class="card-body">
+            <div class="card-title">One account, every journey</div>
+            <div class="card-sub">Hotels, flights, trains, buses, movies and metro tickets — booked and paid for from a single dashboard.</div>
+        </div></div>
+        <div class="card"><div class="card-body">
+            <div class="card-title">Instant e-tickets</div>
+            <div class="card-sub">Get a confirmed booking reference and digital ticket the moment your payment succeeds.</div>
+        </div></div>
+        <div class="card"><div class="card-body">
+            <div class="card-title">Simple, secure payments</div>
+            <div class="card-sub">Pay via UPI, card, net banking or wallet — same checkout flow across every category.</div>
+        </div></div>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

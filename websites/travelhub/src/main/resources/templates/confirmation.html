@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Booking Confirmed')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<div class="container section" style="max-width:700px;">
+    <div class="ticket">
+        <div class="success-icon">✅</div>
+        <h2>Payment successful — booking confirmed!</h2>
+        <div class="ref" th:text="${booking.reference}">TH-XXXXXXXX</div>
+
+        <div class="panel" style="text-align:left; margin-top:20px;">
+            <div class="summary-line"><span>Category</span><span th:text="${booking.type}">HOTEL</span></div>
+            <div class="summary-line"><span>Item</span><span th:text="${booking.itemName}">Item</span></div>
+            <div class="summary-line" th:if="${booking.itemDetails}"><span>Details</span><span th:text="${booking.itemDetails}">Details</span></div>
+            <div class="summary-line" th:if="${booking.travelDate}"><span>Date</span><span th:text="${booking.travelDate}">2026-07-10</span></div>
+            <div class="summary-line"><span>Quantity</span><span th:text="${booking.quantity}">1</span></div>
+            <div class="summary-line"><span>Guest</span><span th:text="${booking.customerName}">Name</span></div>
+            <div class="summary-line"><span>Email</span><span th:text="${booking.customerEmail}">email</span></div>
+            <div class="summary-line" th:if="${payment}"><span>Payment method</span><span th:text="${payment.method}">UPI</span></div>
+            <div class="summary-line" th:if="${payment}"><span>Transaction ID</span><span th:text="${payment.transactionId}">TXN...</span></div>
+            <div class="summary-line total"><span>Amount paid</span><span>₹<span th:text="${#numbers.formatDecimal(booking.amount,0,0)}">0</span></span></div>
+        </div>
+
+        <a class="btn" style="margin-top:22px; display:inline-block;" th:href="@{/}">Back to Home</a>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>
