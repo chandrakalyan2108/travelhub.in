@@ -1,10 +1,13 @@
 pipeline {
     agent any
     environment {
-        REMOTE_USER  = "ubuntu"
-        REMOTE_HOST  = credentials('travelhub-server-ip')
-        APP_CONTEXT  = "travelhub.in"   // deployed at http://<REMOTE_HOST>:8080/travelhub.in/
-        TOMCAT_HOME  = "/opt/tomcat"
+        USERNAME    = "ubuntu"
+        SERVER_IP   = credentials('travelhub-server-ip')
+        APP_CONTEXT = "travelhub.in"
+        APP_DIR     = "/home/ubuntu/travelhub"
+        PROJECT_DIR = "/home/ubuntu/travelhub/websites/travelhub"
+        REPO_URL    = "https://github.com/chandrakalyan2108/travelhub.in.git"
+        TOMCAT_HOME = "/opt/tomcat"
     }
     options {
         timestamps()
@@ -16,102 +19,92 @@ pipeline {
                 checkout scm
             }
         }
-        stage('Build and Deploy on Maven+Tomcat Server') {
+        stage('Build & Deploy') {
             steps {
-                withCredentials([file(credentialsId: 'privatekey.pem', variable: 'PEM')]) {
-                    sh '''
-                    set -e
-                    chmod 400 "$PEM"
-                    ssh -i "$PEM" -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} bash -s -- "$APP_CONTEXT" "$TOMCAT_HOME" << 'EOF'
-set -ex
-APP_CONTEXT="$1"
-TOMCAT_HOME="$2"
-APP_DIR="/home/ubuntu/travelhub"
-PROJECT_DIR="/home/ubuntu/travelhub/websites/travelhub"
-REPO_URL="https://github.com/chandrakalyan2108/travelhub.in.git"
+                sh '''
+                ssh -o StrictHostKeyChecking=no ${USERNAME}@${SERVER_IP} "
+                    set -ex
+                    echo '===== UPDATE SOURCE ====='
+                    if [ ! -d ${APP_DIR}/.git ]; then
+                        rm -rf ${APP_DIR}
+                        git clone ${REPO_URL} ${APP_DIR}
+                    else
+                        cd ${APP_DIR}
+                        git fetch origin
+                        git reset --hard origin/main
+                    fi
 
-echo "===== UPDATE SOURCE ====="
-if [ ! -d "$APP_DIR/.git" ]; then
-    rm -rf "$APP_DIR"
-    git clone "$REPO_URL" "$APP_DIR"
-else
-    cd "$APP_DIR"
-    git fetch origin
-    git reset --hard origin/main
-fi
+                    echo '===== BUILD ====='
+                    cd ${PROJECT_DIR}
+                    mvn clean package -DskipTests
 
-echo "===== BUILD ====="
-cd "$PROJECT_DIR"
-mvn clean package -DskipTests
+                    # Confirm the build actually produced a WAR before touching Tomcat
+                    ls -la target/*.war
+                    WAR_FILE=\\$(ls target/*.war | head -n1)
+                    if [ -z \\\"\\$WAR_FILE\\\" ]; then
+                        echo \\\"ERROR: WAR file not found after build\\\"
+                        exit 1
+                    fi
+                    echo \\\"Built WAR: \\$WAR_FILE\\\"
 
-# Confirm the build actually produced a WAR before touching Tomcat
-ls -la target/*.war
-WAR_FILE=$(find target -maxdepth 1 -name "*.war" | head -1)
-if [ -z "$WAR_FILE" ]; then
-    echo "ERROR: WAR file not found after build"
-    exit 1
-fi
-echo "Built WAR: $WAR_FILE"
+                    # Confirm Tomcat webapps dir exists
+                    if [ ! -d ${TOMCAT_HOME}/webapps ]; then
+                        echo \\\"ERROR: ${TOMCAT_HOME}/webapps is not a directory on this server.\\\"
+                        ls -la ${TOMCAT_HOME} || echo \\\"${TOMCAT_HOME} does not exist at all\\\"
+                        exit 1
+                    fi
 
-# Confirm Tomcat webapps dir exists
-if [ ! -d "${TOMCAT_HOME}/webapps" ]; then
-    echo "ERROR: ${TOMCAT_HOME}/webapps is not a directory on this server."
-    ls -la "${TOMCAT_HOME}" || echo "${TOMCAT_HOME} does not exist at all"
-    exit 1
-fi
+                    # Confirm bin scripts are executable as root
+                    sudo test -x ${TOMCAT_HOME}/bin/shutdown.sh || { echo \\\"ERROR: shutdown.sh not executable\\\"; exit 1; }
+                    sudo test -x ${TOMCAT_HOME}/bin/startup.sh  || { echo \\\"ERROR: startup.sh not executable\\\"; exit 1; }
 
-# Confirm bin scripts are executable as root
-sudo test -x "${TOMCAT_HOME}/bin/shutdown.sh" || { echo "ERROR: shutdown.sh not executable"; exit 1; }
-sudo test -x "${TOMCAT_HOME}/bin/startup.sh"  || { echo "ERROR: startup.sh not executable"; exit 1; }
+                    echo '===== DEPLOY ====='
+                    sudo rm -rf ${TOMCAT_HOME}/webapps/${APP_CONTEXT}
+                    sudo rm -f ${TOMCAT_HOME}/webapps/${APP_CONTEXT}.war
+                    sudo cp \\$WAR_FILE ${TOMCAT_HOME}/webapps/${APP_CONTEXT}.war
 
-echo "===== DEPLOY ====="
-sudo rm -rf "${TOMCAT_HOME}/webapps/${APP_CONTEXT}"
-sudo rm -f "${TOMCAT_HOME}/webapps/${APP_CONTEXT}.war"
-sudo cp "$WAR_FILE" "${TOMCAT_HOME}/webapps/${APP_CONTEXT}.war"
+                    # Stop Tomcat cleanly
+                    sudo ${TOMCAT_HOME}/bin/shutdown.sh || true
+                    sleep 5
 
-echo "===== STOP TOMCAT ====="
-sudo "${TOMCAT_HOME}/bin/shutdown.sh" || true
-sleep 5
+                    # Kill anything still bound to port 8080 (NOT a broad 'pkill -f catalina',
+                    # which matches the deploy shell's own command line -- e.g. catalina.out in
+                    # this very script -- and kills the SSH session running the pipeline itself)
+                    sudo fuser -k 8080/tcp || true
+                    sleep 2
 
-# Kill anything still bound to port 8080 (NOT a broad 'pkill -f catalina',
-# which matches the deploy shell's own command line and can kill the SSH
-# session running the pipeline itself)
-sudo fuser -k 8080/tcp || true
-sleep 2
+                    # Start Tomcat as root consistently (matches sudo used above,
+                    # avoids permission mismatches between root-owned and ubuntu-owned PID/log files)
+                    sudo ${TOMCAT_HOME}/bin/startup.sh
 
-echo "===== START TOMCAT ====="
-sudo "${TOMCAT_HOME}/bin/startup.sh"
+                    # Wait for the app to actually respond instead of assuming success
+                    echo 'Waiting for Tomcat to deploy the app...'
+                    DEPLOYED=false
+                    for i in \\$(seq 1 15); do
+                        sleep 3
+                        STATUS=\\$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/${APP_CONTEXT}/ || echo '000')
+                        echo \\\"Attempt \\$i: HTTP \\$STATUS\\\"
+                        if [ \\\"\\$STATUS\\\" = \\\"200\\\" ] || [ \\\"\\$STATUS\\\" = \\\"302\\\" ]; then
+                            DEPLOYED=true
+                            break
+                        fi
+                    done
 
-echo "===== VERIFY ====="
-echo 'Waiting for Tomcat to deploy the app...'
-DEPLOYED=false
-for i in $(seq 1 15); do
-    sleep 3
-    STATUS=$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:8080/${APP_CONTEXT}/" || echo '000')
-    echo "Attempt $i: HTTP $STATUS"
-    if [ "$STATUS" = "200" ] || [ "$STATUS" = "302" ]; then
-        DEPLOYED=true
-        break
-    fi
-done
-
-if [ "$DEPLOYED" != "true" ]; then
-    echo "ERROR: App did not come up after deploy. Last 100 lines of catalina.out:"
-    tail -100 "${TOMCAT_HOME}/logs/catalina.out"
-    exit 1
-fi
-
-echo "SUCCESS: ${APP_CONTEXT} is responding on port 8080"
-ls -lh "${TOMCAT_HOME}/webapps/"
-EOF
-                    '''
-                }
+                    if [ \\\"\\$DEPLOYED\\\" != \\\"true\\\" ]; then
+                        echo \\\"ERROR: App did not come up after deploy. Last 100 lines of catalina.out:\\\"
+                        tail -100 ${TOMCAT_HOME}/logs/catalina.out
+                        exit 1
+                    fi
+                    echo \\\"SUCCESS: ${APP_CONTEXT} is responding on port 8080\\\"
+                    ls -lh ${TOMCAT_HOME}/webapps/
+                "
+                '''
             }
         }
     }
     post {
         success {
-            echo "✅ Deployment Successful — check http://${REMOTE_HOST}:8080/${APP_CONTEXT}/"
+            echo "✅ Deployment Successful — check http://${SERVER_IP}:8080/${APP_CONTEXT}/"
         }
         failure {
             echo '❌ Deployment Failed'
