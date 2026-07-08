@@ -54,6 +54,9 @@ pipeline {
                         exit 1
                     fi
 
+                    # Ensure Tomcat scripts are executable (self-heal in case permissions were reset)
+                    chmod +x ${TOMCAT_HOME}/bin/*.sh || true
+
                     # Confirm bin scripts are executable
                     test -x ${TOMCAT_HOME}/bin/shutdown.sh || { echo \\\"ERROR: shutdown.sh not executable\\\"; exit 1; }
                     test -x ${TOMCAT_HOME}/bin/startup.sh  || { echo \\\"ERROR: startup.sh not executable\\\"; exit 1; }
