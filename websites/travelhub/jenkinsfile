@@ -24,6 +24,11 @@ pipeline {
                 sh '''
                 ssh -o StrictHostKeyChecking=no ${USERNAME}@${SERVER_IP} "
                     set -ex
+                    echo '===== SESSION INFO ====='
+                    whoami
+                    hostname -I
+                    pwd
+
                     echo '===== UPDATE SOURCE ====='
                     if [ ! -d ${APP_DIR}/.git ]; then
                         rm -rf ${APP_DIR}
@@ -46,6 +51,14 @@ pipeline {
                         exit 1
                     fi
                     echo \\\"Built WAR: \\$WAR_FILE\\\"
+
+                    echo '===== TOMCAT DIAGNOSTICS (before any checks) ====='
+                    echo \\\"TOMCAT_HOME resolves to: ${TOMCAT_HOME}\\\"
+                    readlink -f ${TOMCAT_HOME} || echo 'readlink failed - not a symlink or path issue'
+                    ls -la ${TOMCAT_HOME} || echo \\\"Cannot list ${TOMCAT_HOME}\\\"
+                    ls -la ${TOMCAT_HOME}/bin || echo \\\"Cannot list ${TOMCAT_HOME}/bin\\\"
+                    stat ${TOMCAT_HOME}/bin/shutdown.sh 2>&1 || echo 'stat on shutdown.sh failed'
+                    stat ${TOMCAT_HOME}/bin/startup.sh 2>&1 || echo 'stat on startup.sh failed'
 
                     # Confirm Tomcat webapps dir exists
                     if [ ! -d ${TOMCAT_HOME}/webapps ]; then
